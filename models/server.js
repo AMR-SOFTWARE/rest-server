@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 
 import { routes as usuarioRoutes } from '../routes/usuario.js';
+import { dbConection } from '../db/config.js';
 
 export class Server {
     constructor() {
@@ -9,10 +10,16 @@ export class Server {
         this.port = process.env.PORT || 3000;
         this.api = '/api';
         this.usuarioPath = 'usuarios';
+
+        this.conectDB();
         
         this.middlewares();
 
         this.routes();
+    }
+
+    async conectDB() {
+        await dbConection();
     }
 
     middlewares() {
