@@ -1,40 +1,61 @@
 import { request, response } from 'express';
+import bcryptjs from 'bcryptjs';
 
-export const usuarioGet = (req = request, res = response) => {
+import Usuario from '../models/usuario.js';
 
-    const { q, page = '1', limit = '5' } = req.query;
+export const usuarioGet = async(req = request, res = response) => {
+
+    const { limit = 5, desde = 0 } = req.query;
+    const query = { estado: true };
+
+    const [ total, usuarios ] = await Promise.all([
+        Usuario.countDocuments(query),
+        Usuario.find(query)
+            .skip( Number( desde ) )
+            .limit( Number( limit ) )
+    ]);
 
     res.json({
-        msg: 'Usuario GET - Controller',
-        q,
-        page,
-        limit
+        total,
+        usuarios
     });
 }
 
-export const usuarioPost = (req = request, res = response) => {
+export const usuarioPost = async(req = request, res = response) => {
 
-    const { nombre, edad } = req.body;
+    const { nombre, correo, password, rol } = req.body;
+    const usuario = new Usuario({ nombre, correo, password, rol });
 
-    res.json({
-        msg: 'Usuario POST - Controller',
-        nombre,
-        edad
-    });
+
+    const salt = bcryptjs.genSaltSync();
+    usuario.password = bcryptjs.hashSync( password, salt );
+
+    await usuario.save();
+
+    res.json(usuario);
 }
 
-export const usuarioPut = (req = request, res = response) => {
+export const usuarioPut = async(req = request, res = response) => {
+
+    const { id } = req.params;
+    const { _id, password, google, correo, ...resto } = req.body;
+
+    //TODO: Validar password contra la DB
+    if (password) {
+        const salt = bcryptjs.genSaltSync();
+        resto.password = bcryptjs.hashSync( password, salt );
+    }
+
+    const usuario = await Usuario.findByIdAndUpdate( id, resto, {new: true} );
+
+    res.json(usuario);
+}
+
+export const usuarioDelete = async(req = request, res = response) => {
 
     const { id } = req.params;
 
-    res.json({
-        msg: 'Usuario PUT - Controller',
-        id
-    });
-}
+    const usuario = await Usuario.findByIdAndUpdate( id, { estado: false }, { new: true } )
 
-export const usuarioDelete = (req = request, res = response) => {
-    res.json({
-        msg: 'Usuario DELETE - Controller'
-    });
+    res.json(usuario);
 }
